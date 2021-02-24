@@ -1,9 +1,13 @@
 package com.example.project2.demo.repository;
 
 import com.example.project2.demo.domain.Person;
+import com.example.project2.demo.domain.dto.Birthday;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -11,7 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 @SpringBootTest
+@Transactional
 class PersonRepositoryTest {
     @Autowired
     private PersonRepository personRepository;
@@ -19,37 +25,48 @@ class PersonRepositoryTest {
     @Test
     void crud(){
         Person person = new Person();
-        person.setName("martin");
+        person.setName("john");
         person.setAge(10);
         person.setBloodType("A");
 
         personRepository.save(person);
 
-        System.out.println(personRepository.findAll());
+        List<Person> people = personRepository.findByName("john");
 
-        List<Person> people = personRepository.findAll();
-        assertEquals(people.get(0).getName(),"martin");
+        assertEquals(people.get(0).getName(),"john");
         assertEquals(people.get(0).getAge(), 10);
         assertEquals(people.get(0).getBloodType() , "A");
     }
 
     @Test
     void constructorTest(){
-        Person person = new Person("martin",10);
+        Person person = new Person("martin",10,"A");
     }
 
     @Test
-    void hashCodeAndEquals(){
-        Person person1 = new Person("martin",10);
-        Person person2 = new Person("martin",10);
-        System.out.println(person1.equals(person2));
-        System.out.println(person1.hashCode());
-        System.out.println(person2.hashCode());
+    void findByBloodType(){
+        List<Person> result = personRepository.findByBloodType("A");
+        assertEquals(result.size() , 2);
+        assertEquals(result.get(0).getName(), "martin");
+        assertEquals(result.get(1).getName(), "benny");
+    }
 
-        Map<Person, Integer> map = new HashMap<>();
-        map.put(person1,person1.getAge());
+    @Test
+    void findByBirthdayBetween(){
 
-        System.out.println(map);
-        System.out.println(map.get(person2));
+        List<Person> result=  personRepository.findByMonthOfBirthday(2);
+        assertEquals(result.size() , 3);
+        assertEquals(result.get(0).getName(),"martin");
+        assertEquals(result.get(2).getName(),"benny");
+
+    }
+    private void givenPerson(String name, int age, String bloodType){
+        givenPerson(name,age,bloodType,null);
+    }
+
+    private void givenPerson(String name, int age, String bloodType, LocalDate birthday){
+        Person person = new Person(name, age, bloodType);
+        person.setBirthday(new Birthday(birthday));
+        personRepository.save(person);
     }
 }
