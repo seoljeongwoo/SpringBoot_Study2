@@ -1,5 +1,6 @@
 package com.example.project2.demo.controller;
 
+import com.example.project2.demo.controller.dto.PersonDto;
 import com.example.project2.demo.domain.Person;
 import com.example.project2.demo.repository.PersonRepository;
 import com.example.project2.demo.service.PersonService;
@@ -24,8 +25,23 @@ public class PersonController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void postPerson(@RequestBody Person person){
-        log.info("person : {}", personRepository.findAll());
-        personService.put(person);
+    public void postPerson(@RequestBody PersonDto personDto){
+        personService.put(personDto);
     }
+
+    @PutMapping("/{id}")
+    public void modifyPerson(@PathVariable Long id, @RequestBody PersonDto personDto){
+        personService.modi(id, personDto);
+    }
+
+    @PatchMapping("/{id}")
+    public void modifyPerson(@PathVariable Long id, String name){
+        personService.modi(id,name);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deletePerson(@PathVariable Long id){
+        personService.delete(id);
+    }
+
 }
