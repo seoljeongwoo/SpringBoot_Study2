@@ -3,6 +3,7 @@ package com.example.project2.demo.controller;
 import com.example.project2.demo.controller.dto.PersonDto;
 import com.example.project2.demo.domain.Person;
 import com.example.project2.demo.domain.dto.Birthday;
+import com.example.project2.demo.exception.handler.GlobalExceptionHandler;
 import com.example.project2.demo.repository.PersonRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,23 +21,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.util.NestedServletException;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @Slf4j
 @Transactional
 class PersonControllerTest {
-
-    @Autowired
-    private PersonController personController;
 
     @Autowired
     private PersonRepository personRepository;
@@ -45,16 +44,30 @@ class PersonControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private MappingJackson2HttpMessageConverter messageConverter;
+    private WebApplicationContext webApplicationContext;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void beforeEach(){
-        mockMvc = MockMvcBuilders.standaloneSetup(personController)
-                .setMessageConverters(messageConverter)
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(webApplicationContext)
                 .alwaysDo(print())
                 .build();
+    }
+
+    @Test
+    void getAll() throws Exception{
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/person")
+                    .param("page","1")
+                    .param("size","2"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.totalElements").value(6))
+                .andExpect(jsonPath("$.numberOfElements").value(2))
+                .andExpect(jsonPath("$.content.[0].name").value("dennis"))
+                .andExpect(jsonPath("$.content.[1].name").value("sophia"));
     }
 
     @Test
@@ -104,8 +117,38 @@ class PersonControllerTest {
                 MockMvcRequestBuilders.post("/api/person")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(toJsonString(personDto)))
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("알 수 없는 서버 오류가 발생하였습니다"));
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("이름은 필수값입니다"));
+    }
+
+    @Test
+    void postPersonIfNameIsEmpty() throws Exception{
+        PersonDto personDto = new PersonDto();
+        personDto.setName("");
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/person")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(toJsonString(personDto)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("이름은 필수값입니다"));
+    }
+
+    @Test
+    void postPersonIfNameIsBlankString() throws Exception{
+        PersonDto personDto = new PersonDto();
+        personDto.setName(" ");
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/person")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(toJsonString(personDto)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("이름은 필수값입니다"));
+
     }
 
     @Test
